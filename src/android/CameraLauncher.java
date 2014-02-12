@@ -77,7 +77,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
     private static final String GET_All = "Get All";
     
     private static final String LOG_TAG = "CameraLauncher";
-private static final int CROP_CAMERA = 100;
+    private static final int CROP_CAMERA = 100;
 
     private int mQuality;                   // Compression quality hint (0-100: 0=low quality & high compression, 100=compress of max quality)
     private int targetWidth;                // desired width of the image
@@ -87,7 +87,7 @@ private static final int CROP_CAMERA = 100;
     private int mediaType;                  // What type of media to retrieve
     private boolean saveToPhotoAlbum;       // Should the picture be saved to the device's photo album
     private boolean correctOrientation;     // Should the pictures orientation be corrected
-    private boolean allowEdit;              // Should we allow the user to crop the image. UNUSED.
+    private boolean allowEdit;              // Should we allow the user to crop the image.
 
     public CallbackContext callbackContext;
     private int numPics;
@@ -141,7 +141,7 @@ private static final int CROP_CAMERA = 100;
                     this.takePicture(destType, encodingType);
                 }
                 else if ((srcType == PHOTOLIBRARY) || (srcType == SAVEDPHOTOALBUM)) {
-                    this.getImage(srcType, destType);
+                    this.getImage(srcType, destType, encodingType);
                 }
             }
             catch (IllegalArgumentException e)
@@ -240,10 +240,11 @@ private static final int CROP_CAMERA = 100;
      * @param quality           Compression quality hint (0-100: 0=low quality & high compression, 100=compress of max quality)
      * @param srcType           The album to get image from.
      * @param returnType        Set the type of image to return.
+     * @param encodingType 
      */
     // TODO: Images selected from SDCARD don't display correctly, but from CAMERA ALBUM do!
     // TODO: Images from kitkat filechooser not going into crop function
-    public void getImage(int srcType, int returnType) {
+    public void getImage(int srcType, int returnType, int encodingType) {
         Intent intent = new Intent();
         String title = GET_PICTURE;
         if (this.mediaType == PICTURE) {
@@ -631,8 +632,19 @@ private static final int CROP_CAMERA = 100;
         } else {
             matrix.setRotate(rotate, (float) bitmap.getWidth() / 2, (float) bitmap.getHeight() / 2);
         }
-         bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+
+        try
+        {
+            bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
             exif.resetOrientation();
+        }
+        catch (OutOfMemoryError oom)
+        {
+            // You can run out of memory if the image is very large:
+            // http://simonmacdonald.blogspot.ca/2012/07/change-to-camera-code-in-phonegap-190.html
+            // If this happens, simply do not rotate the image and return it unmodified.
+            // If you do not catch the OutOfMemoryError, the Android app crashes.
+        }
 
         return bitmap;
     }
